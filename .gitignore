@@ -3,3 +3,7 @@
 cmake-build-debug
 
 /build
+
+/bin/
+/logs/
+*.o
