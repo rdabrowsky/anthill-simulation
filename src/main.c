@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include "config.h"
 #include "log.h"
+#include "shm.h"
 
 int main(int argc, char *argv[]) {
     printf("[anthill] pid=%d: start\n", getpid());
@@ -18,17 +19,33 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     
-    // Zaloguj start
-    log_write("anthill", "start M=%d K=%d G=%d", cfg.M, cfg.K, cfg.G);
+    // Utwórz pamięć dzieloną
+    int shmid;
+    Nest *nest = shm_create(cfg.K, cfg.G, &shmid);
+    if (nest == NULL) {
+        log_close();
+        return 1;
+    }
     
-    // Tymczasowo: wypisz config
-    printf("Config: M=%d, K=%d, G=%d, T_c=%d, T_ink=%d, T_K=%d\n",
-           cfg.M, cfg.K, cfg.G, cfg.T_c, cfg.T_ink, cfg.T_K);
-    printf("        D=[%d,%d], E=[%d,%d]\n",
-           cfg.D_min, cfg.D_max, cfg.E_min, cfg.E_max);
+    log_write("anthill", "start M=%d K=%d G=%d shmid=%d", cfg.M, cfg.K, cfg.G, shmid);
+    
+    // Wypisz stan początkowy
+    printf("Shared memory created: shmid=%d\n", shmid);
+    printf("Nest: K=%d, K_max=%d, G=%d, occupancy=%d, alive=%d\n",
+           nest->K, nest->K_max, nest->G, nest->occupancy, nest->alive);
+    printf("Shafts: [%d,%d,%d] (0=FREE, 1=IN, 2=OUT)\n",
+           nest->shafts[0].direction,
+           nest->shafts[1].direction,
+           nest->shafts[2].direction);
+    
+    // TODO: tutaj będzie fork+exec mother i ant
     
     log_write("anthill", "shutdown");
+    
+    // Sprzątanie
+    shm_destroy(shmid, nest);
     log_close();
     
+    printf("Cleanup complete.\n");
     return 0;
 }
